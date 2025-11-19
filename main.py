@@ -7,6 +7,11 @@ from playwright.sync_api import sync_playwright
 def serve_blueprint():
     target_dir = os.path.join(os.path.expanduser("~"), "src", "NegativeRupert")
 
+    # hack to get `uv run` to work in a subprocess in a different directory
+    subprocess_env = os.environ.copy()
+    subprocess_env.pop("VIRTUAL_ENV", None)
+    subprocess_env.pop("UV_PROJECT_ENVIRONMENT", None)
+
     sequential_commands = [
         "lake exe cache get",
         "lake build",
@@ -19,7 +24,8 @@ def serve_blueprint():
     for cmd in sequential_commands:
         try:
             print(f"Running: {cmd}")
-            subprocess.run(cmd, shell=True, check=True, cwd=target_dir)
+            args = shlex.split(cmd)
+            subprocess.run(args, check=True, cwd=target_dir, env=subprocess_env)
         except subprocess.CalledProcessError as e:
             print(f"Error running command '{cmd}': {e}")
             return
@@ -32,7 +38,7 @@ def serve_blueprint():
     bg_args = shlex.split(background_cmd_str)
 
     # Popen starts the process but does NOT wait for it to finish
-    proc_handle = subprocess.Popen(bg_args, cwd=target_dir)
+    proc_handle = subprocess.Popen(bg_args, cwd=target_dir, env=subprocess_env)
 
     return proc_handle
 

@@ -1,4 +1,40 @@
+import os
+import shlex
+import subprocess
 from playwright.sync_api import sync_playwright
+
+
+def serve_blueprint():
+    target_dir = os.path.join(os.path.expanduser("~"), "src", "NegativeRupert")
+
+    sequential_commands = [
+        "lake exe cache get",
+        "lake build",
+        "uv run leanblueprint all"
+    ]
+
+    background_cmd_str = 'uv run leanblueprint serve'
+
+    print("--- Starting Sequential Phase ---")
+    for cmd in sequential_commands:
+        try:
+            print(f"Running: {cmd}")
+            subprocess.run(cmd, shell=True, check=True, cwd=target_dir)
+        except subprocess.CalledProcessError as e:
+            print(f"Error running command '{cmd}': {e}")
+            return
+
+    # --- PHASE 2: Background Command ---
+    print("\n--- Starting Background Phase ---")
+
+    # shlex.split parses the string into a list safe for subprocess (better than shell=True)
+    # e.g. "ls -l" becomes ["ls", "-l"]
+    bg_args = shlex.split(background_cmd_str)
+
+    # Popen starts the process but does NOT wait for it to finish
+    proc_handle = subprocess.Popen(bg_args, cwd=target_dir)
+
+    return proc_handle
 
 # element_id is the ID of the enclosing div.
 def save_svg_from_url(url, element_id, output_filename):
@@ -40,11 +76,20 @@ def save_svg_from_url(url, element_id, output_filename):
         browser.close()
 
 def main():
+
+    child = serve_blueprint()
+    if child is None:
+        return
+
     TARGET_URL = "http://localhost:8000/dep_graph_document.html"
     SVG_ID = "graph"
     OUTPUT_FILE = "downloaded_image.svg"
 
     save_svg_from_url(TARGET_URL, SVG_ID, OUTPUT_FILE)
+
+    child.terminate()
+    child.wait()
+    print("child exited")
 
 
 if __name__ == "__main__":

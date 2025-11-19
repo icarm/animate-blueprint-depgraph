@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright
 
+# element_id is the ID of the enclosing div.
 def save_svg_from_url(url, element_id, output_filename):
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -10,7 +11,7 @@ def save_svg_from_url(url, element_id, output_filename):
 
         # 3. Wait for the SVG to be present in the DOM
         # (This ensures JS has finished rendering the element)
-        selector = f"#{element_id}"
+        selector = f"#{element_id} svg"
         try:
             page.wait_for_selector(selector, state="attached", timeout=10000)
         except Exception as e:
@@ -18,8 +19,8 @@ def save_svg_from_url(url, element_id, output_filename):
             browser.close()
             return
 
-        # 4. Get the SVG element
-        svg_locator = page.locator(selector)
+        # 4. Get the SVG element.
+        svg_locator = page.locator(selector).first
 
         # 5. Extract the outerHTML (the full <svg>...</svg> string)
         # We use evaluate to run a tiny JS snippet inside the browser

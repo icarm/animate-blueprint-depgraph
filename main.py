@@ -1,3 +1,4 @@
+import argparse
 import os
 import shlex
 import subprocess
@@ -82,6 +83,11 @@ def save_svg_from_url(url, element_id, output_filename):
         browser.close()
 
 def main():
+    parser = argparse.ArgumentParser(description="Serve blueprint and save SVG")
+    parser.add_argument("--url", type=str, default="http://localhost:8000/dep_graph_document.html", help="URL to fetch the SVG from")
+    parser.add_argument("--element-id", type=str, default="graph", help="ID of the enclosing div containing the SVG")
+    parser.add_argument("--output", type=str, default="downloaded_image.svg", help="Output filename for the SVG")
+    args = parser.parse_args()
 
     child = serve_blueprint()
     if child is None:
@@ -91,7 +97,7 @@ def main():
     SVG_ID = "graph"
     OUTPUT_FILE = "downloaded_image.svg"
 
-    save_svg_from_url(TARGET_URL, SVG_ID, OUTPUT_FILE)
+    save_svg_from_url(args.url, args.element_id, args.output)
 
     child.terminate()
     child.wait()

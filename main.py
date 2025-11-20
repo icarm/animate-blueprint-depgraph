@@ -1,6 +1,7 @@
 import argparse
 from datetime import datetime
 import os
+import re
 import shlex
 import subprocess
 
@@ -15,6 +16,8 @@ def serve_blueprint(repo_path, commit_id):
     subprocess_env = os.environ.copy()
     subprocess_env.pop("VIRTUAL_ENV", None)
     subprocess_env.pop("UV_PROJECT_ENVIRONMENT", None)
+
+    subprocess_env["PYTHONUNBUFFERED"] = "1"
 
     sequential_commands = [
         "git checkout {}".format(commit_id),
@@ -33,7 +36,7 @@ def serve_blueprint(repo_path, commit_id):
             subprocess.run(args, check=True, cwd=target_dir, env=subprocess_env, stdin=subprocess.DEVNULL)
         except subprocess.CalledProcessError as e:
             print(f"Error running command '{cmd}': {e}")
-            return
+            return None, ""
 
     # --- PHASE 2: Background Command ---
     print("\n--- Starting Background Phase ---")
@@ -43,9 +46,45 @@ def serve_blueprint(repo_path, commit_id):
     bg_args = shlex.split(background_cmd_str)
 
     # Popen starts the process but does NOT wait for it to finish
-    proc_handle = subprocess.Popen(bg_args, cwd=target_dir, env=subprocess_env)
+    proc_handle = subprocess.Popen(bg_args, cwd=target_dir, env=subprocess_env, stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT,
+                                   text=True,
+                                   bufsize=1 )
 
-    return proc_handle
+    # Loop to read stdout line by line until we find the URL
+    while True:
+        # Check if process exited unexpectedly
+        if proc_handle.poll() is not None:
+            print("Background process exited prematurely.")
+            return None, ""
+
+        # Read a line
+        print("reading line...")
+        line = proc_handle.stdout.readline()
+        if not line:
+            break
+        print("line read!")
+
+        # Print the line to your console so you can still see what's happening
+        print(f"[SERVER] {line.strip()}")
+
+        # Regex to look for "Serving http://..."
+        # Matches "Serving http://0.0.0.0:8001/" or similar
+        match = re.search(r"Serving\s+(http://[\w\d\.:]+)", line)
+        if match:
+            detected_url = match.group(1)
+
+            # Fix 0.0.0.0 -> localhost for Playwright compatibility
+            if "0.0.0.0" in detected_url:
+                detected_url = detected_url.replace("0.0.0.0", "localhost")
+
+            print(f"--- Detected Server URL: {detected_url} ---")
+            break
+
+    if not detected_url:
+        raise Exception("failed to detect server url")
+    return proc_handle, detected_url
+
 
 # element_id is the ID of the enclosing div.
 def save_svg_from_url(url, element_id, output_filename):
@@ -74,7 +113,7 @@ def save_svg_from_url(url, element_id, output_filename):
         svg_content = svg_locator.evaluate("el => el.outerHTML")
 
         # 6. Clean/Validate the SVG for standalone use
-        # Standalone SVGs require the xmlns namespace, usually present, 
+        # Standalone SVGs require the xmlns namespace, usually present,
         # but we check to be safe.
         if 'xmlns="http://www.w3.org/2000/svg"' not in svg_content:
             svg_content = svg_content.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"', 1)
@@ -138,13 +177,13 @@ def main():
     ii = 0
     for commit_id in commits:
         print("commit ID:", commit_id)
-        child = serve_blueprint(args.repo_path, commit_id)
+        child, url_prefix = serve_blueprint(args.repo_path, commit_id)
         if child is None:
             print("ignoring this one")
             continue
 
         output_filename = os.path.join(output_directory, "downloaded_image{:05}.svg".format(ii))
-        save_svg_from_url(args.url, args.element_id, output_filename)
+        save_svg_from_url("{}/dep_graph_document.html".format(url_prefix), args.element_id, output_filename)
         ii += 1
 
         child.terminate()

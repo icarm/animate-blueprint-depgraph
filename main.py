@@ -30,7 +30,7 @@ def serve_blueprint(repo_path, commit_id):
         try:
             print(f"Running: {cmd}")
             args = shlex.split(cmd)
-            subprocess.run(args, check=True, cwd=target_dir, env=subprocess_env)
+            subprocess.run(args, check=True, cwd=target_dir, env=subprocess_env, stdin=subprocess.DEVNULL)
         except subprocess.CalledProcessError as e:
             print(f"Error running command '{cmd}': {e}")
             return
@@ -142,7 +142,7 @@ def main():
             continue
 
         output_filename = os.path.join(output_directory, "downloaded_image{}.svg".format(ii))
-        save_svg_from_url(args.url, args.element_id, output_filename, ii)
+        save_svg_from_url(args.url, args.element_id, output_filename)
 
         child.terminate()
         child.wait()

@@ -47,7 +47,7 @@ def serve_blueprint(repo_path):
     return proc_handle
 
 # element_id is the ID of the enclosing div.
-def save_svg_from_url(url, element_id, output_filename):
+def save_svg_from_url(url, element_id, output_directory):
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
@@ -79,6 +79,8 @@ def save_svg_from_url(url, element_id, output_filename):
             svg_content = svg_content.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"', 1)
 
         # 7. Save to file
+        output_filename = os.path.join(output_directory, "downloaded_image.svg")
+        os.makedirs(output_directory, exist_ok=True)
         with open(output_filename, "w", encoding="utf-8") as f:
             f.write(svg_content)
 
@@ -120,7 +122,7 @@ def main():
     parser = argparse.ArgumentParser(description="Serve blueprint and save SVG")
     parser.add_argument("--url", type=str, default="http://localhost:8000/dep_graph_document.html", help="URL to fetch the SVG from")
     parser.add_argument("--element-id", type=str, default="graph", help="ID of the enclosing div containing the SVG")
-    parser.add_argument("--output", type=str, default="downloaded_image.svg", help="Output filename for the SVG")
+    parser.add_argument("--output", type=str, default="output", help="Output directory")
     parser.add_argument("--repo-path", type=str, default="~/src/NegativeRupert", help="Path to the git repository to list commits from")
     args = parser.parse_args()
 

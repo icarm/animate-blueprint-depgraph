@@ -134,15 +134,17 @@ def main():
 
     commits = list_commits_chronologically(args.repo_path)
 
-    for ii, commit_id in enumerate(commits):
+    ii = 0
+    for commit_id in commits:
         print("commit ID:", commit_id)
         child = serve_blueprint(args.repo_path, commit_id)
         if child is None:
             print("ignoring this one")
             continue
 
-        output_filename = os.path.join(output_directory, "downloaded_image{}.svg".format(ii))
+        output_filename = os.path.join(output_directory, "downloaded_image{:05}.svg".format(ii))
         save_svg_from_url(args.url, args.element_id, output_filename)
+        ii += 1
 
         child.terminate()
         child.wait()

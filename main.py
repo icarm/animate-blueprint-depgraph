@@ -125,7 +125,7 @@ def save_svg_from_url(url, element_id, output_filename):
         print(f"Successfully saved SVG to {output_filename}")
         browser.close()
 
-def list_commits_chronologically(repo_path, start_date_str):
+def list_commits_chronologically(repo_path, rev, start_date_str):
     try:
         # Initialize the repository object
         repo = Repo(repo_path)
@@ -138,7 +138,7 @@ def list_commits_chronologically(repo_path, start_date_str):
         # repo.iter_commits() defaults to 'master' (or current HEAD)
         # and iterates backwards (newest -> oldest).
         # We wrap it in list() and use reversed() to go Oldest -> Newest.
-        commits = list(repo.iter_commits(rev="main", paths="blueprint", since=start_date_str))
+        commits = list(repo.iter_commits(rev=rev, paths="blueprint", since=start_date_str))
         commits.reverse() # In-place reversal is slightly more memory efficient than reversed()
 
         print(f"Iterating {len(commits)} commits chronologically:\n")
@@ -166,13 +166,14 @@ def main():
     parser.add_argument("--element-id", type=str, default="graph", help="ID of the enclosing div containing the SVG")
     parser.add_argument("--output", type=str, default="output", help="Output directory")
     parser.add_argument("--repo-path", type=str, default="~/src/NegativeRupert", help="Path to the git repository to list commits from")
+    parser.add_argument("--rev", type=str, default="main", help="Git revision to list commits from")
     parser.add_argument("--start-date", type=str, default="1970-01-01", help="Start date for listing commits (YYYY-MM-DD)")
     args = parser.parse_args()
 
     output_directory = os.path.expanduser(args.output)
     os.makedirs(output_directory, exist_ok=True)
 
-    commits = list_commits_chronologically(args.repo_path, args.start_date)
+    commits = list_commits_chronologically(args.repo_path, args.rev, args.start_date)
 
     ii = 0
     for commit_id in commits:

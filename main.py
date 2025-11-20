@@ -98,7 +98,7 @@ def print_commits_chronologically(repo_path):
         # repo.iter_commits() defaults to 'master' (or current HEAD)
         # and iterates backwards (newest -> oldest).
         # We wrap it in list() and use reversed() to go Oldest -> Newest.
-        commits = list(repo.iter_commits())
+        commits = list(repo.iter_commits(paths="blueprint"))
         commits.reverse() # In-place reversal is slightly more memory efficient than reversed()
 
         print(f"Iterating {len(commits)} commits chronologically:\n")

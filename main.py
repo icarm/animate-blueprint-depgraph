@@ -1,12 +1,15 @@
 import argparse
+from datetime import datetime
 import os
 import shlex
 import subprocess
+
+from git import Repo
 from playwright.sync_api import sync_playwright
 
 
-def serve_blueprint():
-    target_dir = os.path.join(os.path.expanduser("~"), "src", "NegativeRupert")
+def serve_blueprint(repo_path):
+    target_dir = os.path.expanduser(repo_path)
 
     # hack to get `uv run` to work in a subprocess in a different directory
     subprocess_env = os.environ.copy()
@@ -82,20 +85,52 @@ def save_svg_from_url(url, element_id, output_filename):
         print(f"Successfully saved SVG to {output_filename}")
         browser.close()
 
+def print_commits_chronologically(repo_path):
+    try:
+        # Initialize the repository object
+        repo = Repo(repo_path)
+
+        # check if the repo is empty
+        if repo.bare:
+            print(f"The repository at {repo_path} is bare.")
+            return
+
+        # repo.iter_commits() defaults to 'master' (or current HEAD)
+        # and iterates backwards (newest -> oldest).
+        # We wrap it in list() and use reversed() to go Oldest -> Newest.
+        commits = list(repo.iter_commits())
+        commits.reverse() # In-place reversal is slightly more memory efficient than reversed()
+
+        print(f"Iterating {len(commits)} commits chronologically:\n")
+
+        for commit in commits:
+            # Convert unix timestamp to a readable date
+            commit_date = datetime.fromtimestamp(commit.committed_date).strftime('%Y-%m-%d %H:%M:%S')
+
+            print(f"Commit: {commit.hexsha[:7]}")
+            print(f"Author: {commit.author.name} <{commit.author.email}>")
+            print(f"Date:   {commit_date}")
+            print(f"Message: {commit.message.strip()}")
+            print("-" * 40)
+
+    except Exception as e:
+        print(f"Error: {e}")
+
 def main():
     parser = argparse.ArgumentParser(description="Serve blueprint and save SVG")
     parser.add_argument("--url", type=str, default="http://localhost:8000/dep_graph_document.html", help="URL to fetch the SVG from")
     parser.add_argument("--element-id", type=str, default="graph", help="ID of the enclosing div containing the SVG")
     parser.add_argument("--output", type=str, default="downloaded_image.svg", help="Output filename for the SVG")
+    parser.add_argument("--repo-path", type=str, default="~/src/NegativeRupert", help="Path to the git repository to list commits from")
     args = parser.parse_args()
 
-    child = serve_blueprint()
+    print_commits_chronologically(args.repo_path)
+
+    child = serve_blueprint(args.repo_path)
     if child is None:
         return
 
-    TARGET_URL = "http://localhost:8000/dep_graph_document.html"
-    SVG_ID = "graph"
-    OUTPUT_FILE = "downloaded_image.svg"
+
 
     save_svg_from_url(args.url, args.element_id, args.output)
 

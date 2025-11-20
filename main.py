@@ -4,6 +4,7 @@ import os
 import re
 import shlex
 import subprocess
+import time
 
 from git import Repo
 from playwright.sync_api import sync_playwright
@@ -21,9 +22,10 @@ def serve_blueprint(repo_path, commit_id):
 
     sequential_commands = [
         "git checkout {}".format(commit_id),
-        "lake exe cache get",
-        "lake build",
-        "uv run leanblueprint all"
+ #       "lake exe cache get",
+ #       "lake build",
+        "uv run leanblueprint web",
+#        "uv run leanblueprint pdf",
     ]
 
     background_cmd_str = 'uv run leanblueprint serve'
@@ -51,6 +53,7 @@ def serve_blueprint(repo_path, commit_id):
                                    text=True,
                                    bufsize=1 )
 
+    detected_url = None
     # Loop to read stdout line by line until we find the URL
     while True:
         # Check if process exited unexpectedly
@@ -64,6 +67,18 @@ def serve_blueprint(repo_path, commit_id):
         if not line:
             break
         print("line read!")
+
+        if line.strip() == "Could not find an available port.":
+            print('failed to get port. sleeping and trying again...')
+            time.sleep(20)
+            print("trying again...")
+            # Popen starts the process but does NOT wait for it to finish
+            proc_handle = subprocess.Popen(bg_args, cwd=target_dir, env=subprocess_env, stdout=subprocess.PIPE,
+                                           stderr=subprocess.STDOUT,
+                                           text=True,
+                                           bufsize=1 )
+
+            continue
 
         # Print the line to your console so you can still see what's happening
         print(f"[SERVER] {line.strip()}")

@@ -8,7 +8,7 @@ from git import Repo
 from playwright.sync_api import sync_playwright
 
 
-def serve_blueprint(repo_path):
+def serve_blueprint(repo_path, commit_id):
     target_dir = os.path.expanduser(repo_path)
 
     # hack to get `uv run` to work in a subprocess in a different directory
@@ -17,6 +17,7 @@ def serve_blueprint(repo_path):
     subprocess_env.pop("UV_PROJECT_ENVIRONMENT", None)
 
     sequential_commands = [
+        "git checkout {}".format(commit_id),
         "lake exe cache get",
         "lake build",
         "uv run leanblueprint all"
@@ -47,7 +48,7 @@ def serve_blueprint(repo_path):
     return proc_handle
 
 # element_id is the ID of the enclosing div.
-def save_svg_from_url(url, element_id, output_directory):
+def save_svg_from_url(url, element_id, output_filename):
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
@@ -79,15 +80,13 @@ def save_svg_from_url(url, element_id, output_directory):
             svg_content = svg_content.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"', 1)
 
         # 7. Save to file
-        output_filename = os.path.join(output_directory, "downloaded_image.svg")
-        os.makedirs(output_directory, exist_ok=True)
         with open(output_filename, "w", encoding="utf-8") as f:
             f.write(svg_content)
 
         print(f"Successfully saved SVG to {output_filename}")
         browser.close()
 
-def print_commits_chronologically(repo_path):
+def list_commits_chronologically(repo_path):
     try:
         # Initialize the repository object
         repo = Repo(repo_path)
@@ -95,17 +94,19 @@ def print_commits_chronologically(repo_path):
         # check if the repo is empty
         if repo.bare:
             print(f"The repository at {repo_path} is bare.")
-            return
+            return None
 
         # repo.iter_commits() defaults to 'master' (or current HEAD)
         # and iterates backwards (newest -> oldest).
         # We wrap it in list() and use reversed() to go Oldest -> Newest.
-        commits = list(repo.iter_commits(paths="blueprint"))
+        commits = list(repo.iter_commits(rev="main", paths="blueprint"))
         commits.reverse() # In-place reversal is slightly more memory efficient than reversed()
 
         print(f"Iterating {len(commits)} commits chronologically:\n")
 
+        result = []
         for commit in commits:
+            result.append(commit.hexsha[:10])
             # Convert unix timestamp to a readable date
             commit_date = datetime.fromtimestamp(commit.committed_date).strftime('%Y-%m-%d %H:%M:%S')
 
@@ -114,6 +115,8 @@ def print_commits_chronologically(repo_path):
             print(f"Date:   {commit_date}")
             print(f"Message: {commit.message.strip()}")
             print("-" * 40)
+
+        return result
 
     except Exception as e:
         print(f"Error: {e}")
@@ -126,19 +129,23 @@ def main():
     parser.add_argument("--repo-path", type=str, default="~/src/NegativeRupert", help="Path to the git repository to list commits from")
     args = parser.parse_args()
 
-    print_commits_chronologically(args.repo_path)
+    output_directory = os.path.expanduser(args.output)
+    os.makedirs(output_directory, exist_ok=True)
 
-    child = serve_blueprint(args.repo_path)
-    if child is None:
-        return
+    commits = list_commits_chronologically(args.repo_path)
 
+    for ii, commit_id in enumerate(commits):
+        print("commit ID:", commit_id)
+        child = serve_blueprint(args.repo_path, commit_id)
+        if child is None:
+            print("ignoring this one")
+            continue
 
+        output_filename = os.path.join(output_directory, "downloaded_image{}.svg".format(ii))
+        save_svg_from_url(args.url, args.element_id, output_filename, ii)
 
-    save_svg_from_url(args.url, args.element_id, args.output)
-
-    child.terminate()
-    child.wait()
-    print("child exited")
+        child.terminate()
+        child.wait()
 
 
 if __name__ == "__main__":

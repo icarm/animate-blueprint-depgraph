@@ -129,17 +129,49 @@ def construct_html(dots, outfile):
     with open(outfile, "w", encoding="utf-8") as f:
         f.write(OUTPUT_HEADER)
         for dot in dots:
-            f.write("['")
+            f.write("[`")
             f.write(dot)
-            f.write("'],\n")
+            f.write("`],\n")
         f.write("];\n")
         f.write("</script>\n")
 
 def fix_up_dot(dot):
     graphs = pydot.graph_from_dot_data(dot)
-    graph = graphs[0]
-    print(graph.to_string())
-    return dot
+    original_g = graphs[0]
+
+    # 2. Create a new graph with the same properties (type, name, strictness)
+    # strict=True means duplicate edges are not allowed
+    new_g = pydot.Dot(
+        graph_name=original_g.get_name(),
+        graph_type=original_g.get_type(),
+        strict=original_g.get_strict()
+    )
+
+    # 3. Copy top-level graph attributes (e.g., rankdir, bgcolor)
+    # original_g.get_attributes() returns a dictionary of attributes
+    for key, value in original_g.get_attributes().items():
+        new_g.set(key, value)
+
+    # 4. Get all explicit nodes, sort them by name, and add them to the new graph
+    # Note: get_nodes() returns a list of pydot.Node objects
+    nodes = original_g.get_nodes()
+    # We sort by the node's name. We strip quotes to ensure '"a"' sorts with 'a' correctly if needed.
+    nodes.sort(key=lambda x: x.get_name().strip('"'))
+
+    for node in nodes:
+        # We allow pydot to handle the object copy/reference
+        new_g.add_node(node)
+
+    # 5. Copy over existing edges (order usually preserved from input)
+    for edge in original_g.get_edges():
+        new_g.add_edge(edge)
+
+    # 6. Copy over subgraphs (optional, but good practice to preserve structure)
+    for subgraph in original_g.get_subgraphs():
+        new_g.add_subgraph(subgraph)
+
+    print(new_g.to_string())
+    return new_g.to_string()
 
 
 def main():

@@ -7,6 +7,7 @@ import subprocess
 import time
 
 from git import Repo
+import pydot
 
 def get_depgraph(repo_path, commit_id):
     target_dir = os.path.expanduser(repo_path)
@@ -134,6 +135,13 @@ def construct_html(dots, outfile):
         f.write("];\n")
         f.write("</script>\n")
 
+def fix_up_dot(dot):
+    graphs = pydot.graph_from_dot_data(dot)
+    graph = graphs[0]
+    print(graph.to_string())
+    return dot
+
+
 def main():
     parser = argparse.ArgumentParser(description="Serve blueprint and save SVG")
     parser.add_argument("--url", type=str, default="http://localhost:8000/dep_graph_document.html", help="URL to fetch the SVG from")
@@ -153,7 +161,8 @@ def main():
     for commit_id in commits:
         print("commit ID:", commit_id)
         dot = get_depgraph(args.repo_path, commit_id)
-        if dot :
+        if dot:
+            dot = fix_up_dot(dot)
             dots.append(dot)
         ii += 1
 

@@ -195,7 +195,10 @@ def main():
         dot = get_depgraph(args.repo_path, commit_id)
         if dot:
             dot = fix_up_dot(dot)
-            dots.append(dot)
+            if len(dots) > 0 and dots[-1] == dot:
+                pass
+            else:
+                dots.append(dot)
         ii += 1
 
     construct_html(dots, "/Users/dwrensha/Desktop/out.html")

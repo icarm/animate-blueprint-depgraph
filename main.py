@@ -88,6 +88,52 @@ def list_commits_chronologically(repo_path, rev, start_date_str):
     except Exception as e:
         print(f"Error: {e}")
 
+
+OUTPUT_HEADER="""
+<!DOCTYPE html>
+<meta charset="utf-8">
+<body>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://unpkg.com/@hpcc-js/wasm@2.20.0/dist/graphviz.umd.js"></script>
+<script src="https://unpkg.com/d3-graphviz@5.6.0/build/d3-graphviz.js"></script>
+<div id="graph" style="text-align: center;"></div>
+<script>
+
+var dotIndex = 0;
+var graphviz = d3.select("#graph").graphviz()
+    .transition(function () {
+        return d3.transition("main")
+            .ease(d3.easeLinear)
+            .delay(500)
+            .duration(1500);
+    })
+    .logEvents(true)
+    .on("initEnd", render);
+
+function render() {
+    var dotLines = dots[dotIndex];
+    var dot = dotLines.join('');
+    graphviz
+        .renderDot(dot)
+        .on("end", function () {
+            dotIndex = (dotIndex + 1) % dots.length;
+            render();
+        });
+}
+
+var dots = [
+"""
+
+def construct_html(dots, outfile):
+    with open(outfile, "w", encoding="utf-8") as f:
+        f.write(OUTPUT_HEADER)
+        for dot in dots:
+            f.write("['")
+            f.write(dot)
+            f.write("'],\n")
+        f.write("];\n")
+        f.write("</script>\n")
+
 def main():
     parser = argparse.ArgumentParser(description="Serve blueprint and save SVG")
     parser.add_argument("--url", type=str, default="http://localhost:8000/dep_graph_document.html", help="URL to fetch the SVG from")
@@ -102,15 +148,16 @@ def main():
 
     commits = list_commits_chronologically(args.repo_path, args.rev, args.start_date)
 
+    dots = []
     ii = 0
     for commit_id in commits:
         print("commit ID:", commit_id)
         dot = get_depgraph(args.repo_path, commit_id)
-
-        #output_filename = os.path.join(output_directory, "downloaded_image{:05}.svg".format(ii))
-        #save_svg_from_url("{}/dep_graph_document.html".format(url_prefix), args.element_id, output_filename)
+        if dot :
+            dots.append(dot)
         ii += 1
 
+    construct_html(dots, "/Users/dwrensha/Desktop/out.html")
 
 if __name__ == "__main__":
     main()

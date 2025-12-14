@@ -102,6 +102,10 @@ OUTPUT_HEADER="""
 
 var dotIndex = 0;
 var graphviz = d3.select("#graph").graphviz()
+    .width(window.innerWidth - 30)
+    .height(window.innerHeight - 30)
+    .zoom(false)
+    .fit(true)
     .transition(function () {
         return d3.transition("main")
             .ease(d3.easeLinear)

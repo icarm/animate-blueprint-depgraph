@@ -98,6 +98,10 @@ def list_commits_chronologically(repo_path, rev, start_date_str):
     except Exception as e:
         print(f"Error: {e}")
 
+@dataclass
+class DepGraph:
+    dot: str
+    commit: CommitInfo
 
 OUTPUT_HEADER="""
 <!DOCTYPE html>
@@ -138,12 +142,12 @@ function render() {
 var dots = [
 """
 
-def construct_html(dots, outfile):
+def construct_html(depgraphs, outfile):
     with open(outfile, "w", encoding="utf-8") as f:
         f.write(OUTPUT_HEADER)
-        for dot in dots:
+        for depgraph in depgraphs:
             f.write("[`")
-            f.write(dot)
+            f.write(depgraph.dot)
             f.write("`],\n")
         f.write("];\n")
         f.write("</script>\n")
@@ -201,20 +205,20 @@ def main():
 
     commits = list_commits_chronologically(args.repo_path, args.rev, args.start_date)
 
-    dots = []
+    depgraphs = []
     ii = 0
     for commit in commits:
         print("commit ID:", commit.commit_id)
         dot = get_depgraph(args.repo_path, commit.commit_id)
         if dot:
             dot = fix_up_dot(dot)
-            if len(dots) > 0 and dots[-1] == dot:
+            if len(depgraphs) > 0 and depgraphs[-1].dot == dot:
                 pass
             else:
-                dots.append(dot)
+                depgraphs.append(DepGraph(dot=dot, commit=commit))
         ii += 1
 
-    construct_html(dots, "/Users/dwrensha/Desktop/out.html")
+    construct_html(depgraphs, "/Users/dwrensha/Desktop/out.html")
 
 if __name__ == "__main__":
     main()

@@ -81,7 +81,7 @@ def list_commits_chronologically(repo_path, rev, start_date_str):
         result = []
         for commit in commits:
             # Convert unix timestamp to a readable date
-            commit_date = datetime.fromtimestamp(commit.committed_date).strftime('%Y-%m-%d %H:%M:%S')
+            commit_date = datetime.fromtimestamp(commit.committed_date)
 
             print(f"Commit: {commit.hexsha[:7]}")
             print(f"Author: {commit.author.name} <{commit.author.email}>")
@@ -129,8 +129,8 @@ var graphviz = d3.select("#graph").graphviz()
     .on("initEnd", render);
 
 function render() {
-    var dotLines = dots[dotIndex];
-    var dot = dotLines.join('');
+    var depgraph = dots[dotIndex];
+    var dot = depgraph.dot;
     graphviz
         .renderDot(dot)
         .on("end", function () {
@@ -146,9 +146,10 @@ def construct_html(depgraphs, outfile):
     with open(outfile, "w", encoding="utf-8") as f:
         f.write(OUTPUT_HEADER)
         for depgraph in depgraphs:
-            f.write("[`")
+            f.write('{"dot": `')
             f.write(depgraph.dot)
-            f.write("`],\n")
+            f.write("`,\n")
+            f.write('"timestamp": "{}" }},\n'.format(depgraph.commit.timestamp.strftime('%Y-%m-%d %H:%M:%S')))
         f.write("];\n")
         f.write("</script>\n")
 

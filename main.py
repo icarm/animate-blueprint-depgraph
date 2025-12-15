@@ -1,4 +1,5 @@
 import argparse
+from dataclasses import dataclass
 from datetime import datetime
 import os
 import re
@@ -54,6 +55,11 @@ def get_depgraph(repo_path, commit_id):
     dot = matches[0]
     return dot
 
+@dataclass
+class CommitInfo:
+    commit_id: str
+    timestamp: datetime
+
 def list_commits_chronologically(repo_path, rev, start_date_str):
     try:
         # Initialize the repository object
@@ -74,7 +80,6 @@ def list_commits_chronologically(repo_path, rev, start_date_str):
 
         result = []
         for commit in commits:
-            result.append(commit.hexsha[:10])
             # Convert unix timestamp to a readable date
             commit_date = datetime.fromtimestamp(commit.committed_date).strftime('%Y-%m-%d %H:%M:%S')
 
@@ -83,6 +88,10 @@ def list_commits_chronologically(repo_path, rev, start_date_str):
             print(f"Date:   {commit_date}")
             print(f"Message: {commit.message.strip()}")
             print("-" * 40)
+
+            commit_info = CommitInfo(commit_id = commit.hexsha[:10], timestamp = commit_date)
+            result.append(commit_info)
+
 
         return result
 
@@ -194,9 +203,9 @@ def main():
 
     dots = []
     ii = 0
-    for commit_id in commits:
-        print("commit ID:", commit_id)
-        dot = get_depgraph(args.repo_path, commit_id)
+    for commit in commits:
+        print("commit ID:", commit.commit_id)
+        dot = get_depgraph(args.repo_path, commit.commit_id)
         if dot:
             dot = fix_up_dot(dot)
             if len(dots) > 0 and dots[-1] == dot:

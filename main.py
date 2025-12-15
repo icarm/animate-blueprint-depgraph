@@ -52,7 +52,6 @@ def get_depgraph(repo_path, commit_id):
         print("too many matches!")
 
     dot = matches[0]
-    print(dot)
     return dot
 
 def list_commits_chronologically(repo_path, rev, start_date_str):

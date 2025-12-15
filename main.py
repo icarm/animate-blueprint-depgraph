@@ -110,6 +110,7 @@ OUTPUT_HEADER="""
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://unpkg.com/@hpcc-js/wasm@2.20.0/dist/graphviz.umd.js"></script>
 <script src="https://unpkg.com/d3-graphviz@5.6.0/build/d3-graphviz.js"></script>
+<div id="timestamp" style="text-align: center; font-family: sans-serif; font-size: 20px; margin-top: 20px;"></div>
 <div id="graph" style="text-align: center;"></div>
 <script>
 
@@ -134,6 +135,7 @@ function render() {
     graphviz
         .renderDot(dot)
         .on("end", function () {
+            d3.select("#timestamp").text(depgraph.timestamp);
             dotIndex = (dotIndex + 1) % dots.length;
             render();
         });

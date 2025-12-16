@@ -319,8 +319,11 @@ def main():
             if len(depgraphs) > 0 and depgraphs[-1].dot == dot:
                 pass
             else:
+                contributors = list(filter(lambda c: c['type'] == 'github_user',
+                                           revision_info["contributors"]))
+                print("contribs = ", contributors)
                 depgraphs.append(DepGraph(dot=dot, commit=commit,
-                                          contributors=revision_info["contributors"]))
+                                          contributors=contributors))
         ii += 1
 
     construct_html(depgraphs, "/Users/dwrensha/Desktop/out.html")

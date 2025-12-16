@@ -90,7 +90,7 @@ def list_commits_chronologically(repo_path, rev, start_date_str):
             print(f"Message: {commit.message.strip()}")
             print("-" * 40)
 
-            commit_info = CommitInfo(commit_id = commit.hexsha[:10], timestamp = commit_date)
+            commit_info = CommitInfo(commit_id = commit.hexsha, timestamp = commit_date)
             result.append(commit_info)
 
 
@@ -103,6 +103,7 @@ def list_commits_chronologically(repo_path, rev, start_date_str):
 class DepGraph:
     dot: str
     commit: CommitInfo
+    contributors: list
 
 OUTPUT_HEADER="""
 <!DOCTYPE html>
@@ -152,7 +153,9 @@ def construct_html(depgraphs, outfile):
             f.write('{"dot": `')
             f.write(depgraph.dot)
             f.write("`,\n")
-            f.write('"timestamp": "{}" }},\n'.format(depgraph.commit.timestamp.strftime('%Y-%m-%d %H:%M:%S')))
+            f.write('"timestamp": "{}",\n'.format(
+                depgraph.commit.timestamp.strftime('%Y-%m-%d %H:%M:%S')))
+            f.write('"contributors": {} }},\n'.format(depgraph.contributors))
         f.write("];\n")
         f.write("</script>\n")
 
@@ -253,12 +256,14 @@ def main():
     for commit in commits:
         print("commit ID:", commit.commit_id)
         dot = get_depgraph(args.repo_path, commit.commit_id)
+        revision_info = revision_history_by_hash[commit.commit_id]
         if dot:
             dot = fix_up_dot(dot)
             if len(depgraphs) > 0 and depgraphs[-1].dot == dot:
                 pass
             else:
-                depgraphs.append(DepGraph(dot=dot, commit=commit))
+                depgraphs.append(DepGraph(dot=dot, commit=commit,
+                                          contributors=revision_info["contributors"]))
         ii += 1
 
     construct_html(depgraphs, "/Users/dwrensha/Desktop/out.html")

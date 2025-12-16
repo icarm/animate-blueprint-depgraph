@@ -28,6 +28,7 @@ def get_depgraph(repo_path, commit_id):
         "uv run leanblueprint web",
 #        "uv run leanblueprint pdf",
         "git reset --hard HEAD", # clean up changes to output files that were accidentally checked in
+        "git clean -f",
     ]
 
     print("--- Starting Sequential Phase ---")

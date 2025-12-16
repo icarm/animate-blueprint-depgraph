@@ -113,30 +113,56 @@ OUTPUT_HEADER="""
         margin: 0;
         overflow: hidden; /* Prevent scrollbars */
         font-family: sans-serif;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
     }
 
     #top-bar {
         height: 30px;
+        flex-shrink: 0; /* Prevent shrinking */
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0 15px;
+        justify-content: center; /* Center horizontally */
+        align-items: center;     /* Center vertically */
         background-color: #f8f9fa;
         border-bottom: 1px solid #ddd;
-        box-sizing: border-box;
     }
 
     #timestamp {
-        font-size: 14px;
+        font-size: 16px;
         font-weight: bold;
         color: #333;
+    }
+
+    #graph {
+        flex-grow: 1; /* Take up all available remaining space */
+        width: 100vw;
+        text-align: center;
+        overflow: hidden; 
+    }
+
+    #bottom-bar {
+        height: 40px;
+        flex-shrink: 0; /* Prevent shrinking */
+        display: flex;
+        align-items: center;
+        padding: 0 15px;
+        background-color: #f8f9fa;
+        border-top: 1px solid #ddd;
+        box-sizing: border-box;
+    }
+    .label {
+        font-weight: bold;
+        margin-right: 10px;
+        font-size: 14px;
+        color: #555;
+        text-transform: capitalize;
     }
 
     #contributors {
         display: flex;
         align-items: center;
     }
-
     .avatar {
         height: 24px;
         width: 24px;
@@ -146,9 +172,10 @@ OUTPUT_HEADER="""
     }
 
     #graph {
+        flex-grow: 1; /* Take up all available remaining space */
         width: 100vw;
-        height: calc(100vh - 30px); /* Fill remaining height */
         text-align: center;
+        overflow: hidden; 
     }
 </style>
 <body>
@@ -157,9 +184,12 @@ OUTPUT_HEADER="""
 <script src="https://unpkg.com/d3-graphviz@5.6.0/build/d3-graphviz.js"></script>
 <div id="top-bar">
     <div id="timestamp">0000-00-00</div>
-    <div id="contributors"></div>
 </div>
 <div id="graph" style="text-align: center;"></div>
+<div id="bottom-bar">
+    <span class="label">contributors:</span>
+    <div id="contributors"></div>
+</div>
 <script>
 
 var dotIndex = 0;

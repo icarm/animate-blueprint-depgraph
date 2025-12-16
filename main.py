@@ -108,11 +108,57 @@ class DepGraph:
 OUTPUT_HEADER="""
 <!DOCTYPE html>
 <meta charset="utf-8">
+<style>
+    body {
+        margin: 0;
+        overflow: hidden; /* Prevent scrollbars */
+        font-family: sans-serif;
+    }
+
+    #top-bar {
+        height: 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 15px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #ddd;
+        box-sizing: border-box;
+    }
+
+    #timestamp {
+        font-size: 14px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    #contributors {
+        display: flex;
+        align-items: center;
+    }
+
+    .avatar {
+        height: 24px;
+        width: 24px;
+        border-radius: 50%;
+        margin-left: 8px;
+        border: 1px solid #ccc;
+    }
+
+    #graph {
+        width: 100vw;
+        height: calc(100vh - 30px); /* Fill remaining height */
+        text-align: center;
+    }
+</style>
 <body>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://unpkg.com/@hpcc-js/wasm@2.20.0/dist/graphviz.umd.js"></script>
 <script src="https://unpkg.com/d3-graphviz@5.6.0/build/d3-graphviz.js"></script>
-<div id="timestamp" style="text-align: center; font-family: sans-serif; font-size: 20px; margin-top: 20px;"></div>
+<div id="top-bar">
+    <div id="timestamp">0000-00-00</div>
+    <div id="contributors"></div>
+</div>
 <div id="graph" style="text-align: center;"></div>
 <script>
 
@@ -134,10 +180,21 @@ var graphviz = d3.select("#graph").graphviz()
 function render() {
     var depgraph = dots[dotIndex];
     var dot = depgraph.dot;
+    // Update Top Bar Data immediately
+    d3.select("#timestamp").text(depgraph.timestamp);
+    // Update Contributors (using D3 join pattern)
+    d3.select("#contributors")
+        .selectAll("img")
+        .data(depgraph.contributors || [])
+        .join("img")
+        .attr("class", "avatar")
+        .attr("src", d => d.avatar_url)
+        .attr("title", d => d.login) // Tooltip on hover
+        .attr("alt", d => d.login);
+
     graphviz
         .renderDot(dot)
         .on("end", function () {
-            d3.select("#timestamp").text(depgraph.timestamp);
             dotIndex = (dotIndex + 1) % dots.length;
             render();
         });

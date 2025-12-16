@@ -113,10 +113,10 @@ def analyze_contributors_history(commits):
 
     return history_data
 
-# --- MAIN EXECUTION ---
-try:
+
+def get_revision_history(owner, repo, branch="main"):
     # 1. Get raw data
-    raw_commits = fetch_all_commits(OWNER, REPO, BRANCH)
+    raw_commits = fetch_all_commits(owner, repo, branch)
 
     # 2. Process data
     revision_history = analyze_contributors_history(raw_commits)
@@ -124,12 +124,18 @@ try:
     # 3. Output Example (Printing the last 3 revisions)
     print(f"\nAnalysis Complete. Total revisions processed: {len(revision_history)}")
 
-    for revision in revision_history:
-        print(f"Commit: {revision['commit_sha'][:7]} | Date: {revision['date']}")
-        print(f"Total Contributors up to this point: {revision['contributor_count']}")
-        display_contributors = [c['login'] for c in revision['contributors']]
-        print(f"Contributors: {display_contributors}...")
-        print("-" * 40)
+    return revision_history
 
-except Exception as e:
-    print(f"Error: {e}")
+
+if __name__ == "__main__":
+    try:
+        revision_history = get_revision_history(OWNER, REPO, BRANCH)
+        for revision in revision_history:
+            print(f"Commit: {revision['commit_sha'][:7]} | Date: {revision['date']}")
+            print(f"Total Contributors up to this point: {revision['contributor_count']}")
+            display_contributors = [c['login'] for c in revision['contributors']]
+            print(f"Contributors: {display_contributors}...")
+            print("-" * 40)
+
+    except Exception as e:
+        print(f"Error: {e}")

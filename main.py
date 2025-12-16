@@ -1,6 +1,7 @@
 import argparse
 from dataclasses import dataclass
 from datetime import datetime
+import get_collaborators
 import os
 import re
 import shlex
@@ -193,6 +194,41 @@ def fix_up_dot(dot):
     print(new_g.to_string())
     return new_g.to_string()
 
+def extract_github_info(repo_path):
+    repo = Repo(repo_path)
+
+    try:
+        origin = repo.remote(name='origin')
+    except ValueError:
+        raise Exception("Error: Remote 'origin' does not exist in this repository.")
+
+    remote_url = str(origin.url)
+
+    # Basic check for GitHub domain
+    if "github.com" not in remote_url:
+        raise Exception(f"❌ Origin URL is not from GitHub: {remote_url}")
+
+    print(f"Found GitHub URL: {remote_url}")
+
+    # Regex to extract Owner and Repo Name
+    # Handles:
+    # 1. SSH:   git@github.com:owner/repo.git
+    # 2. HTTPS: https://github.com/owner/repo.git
+    # 3. git://github.com/owner/repo.git
+    pattern = r'(?:git@|https://|ssh://git@|git://)github\.com[:/]([^/]+)/(.+?)(?:\.git)?$'
+
+    match = re.search(pattern, remote_url)
+
+    if match:
+        owner, repo_name = match.groups()
+        print("-" * 30)
+        print(f"✅ Owner : {owner}")
+        print(f"✅ Repo  : {repo_name}")
+        print("-" * 30)
+        return owner, repo_name
+    else:
+        raise Exception("❌ Could not parse owner and repo name from URL.")
+
 
 def main():
     parser = argparse.ArgumentParser(description="Serve blueprint and save SVG")
@@ -205,6 +241,10 @@ def main():
 
     output_directory = os.path.expanduser(args.output)
     os.makedirs(output_directory, exist_ok=True)
+
+    github_owner, github_repo = extract_github_info(args.repo_path)
+    revision_history_by_hash = get_collaborators.get_revision_history_by_hash(
+        github_owner, github_repo, args.rev)
 
     commits = list_commits_chronologically(args.repo_path, args.rev, args.start_date)
 

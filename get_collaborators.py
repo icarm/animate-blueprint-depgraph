@@ -129,7 +129,7 @@ def get_revision_history(owner, repo, branch="main"):
 def get_revision_history_by_hash(owner, repo, branch="main"):
     revision_history = get_revision_history(owner, repo, branch)
     result = {}
-    for rev in revisiton_history:
+    for rev in revision_history:
         result[rev['commit_sha']] = rev
 
     return result

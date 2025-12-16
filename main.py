@@ -356,7 +356,7 @@ def main():
                                           contributors=contributors))
         ii += 1
 
-    construct_html(depgraphs, "/Users/dwrensha/Desktop/out.html")
+    construct_html(depgraphs, os.path.join(args.output, "{}.html".format(github_repo)))
 
 if __name__ == "__main__":
     main()

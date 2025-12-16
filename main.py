@@ -140,7 +140,7 @@ OUTPUT_HEADER="""
     .avatar {
         height: 24px;
         width: 24px;
-        border-radius: 50%;
+        border-radius: 5%;
         margin-left: 8px;
         border: 1px solid #ccc;
     }

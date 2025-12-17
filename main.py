@@ -199,6 +199,7 @@ var graphviz = d3.select("#graph").graphviz()
     .height(window.innerHeight - 70)
     .zoom(false)
     .fit(true)
+    .tweenShapes(false)
     .transition(function () {
         return d3.transition("main")
             .ease(d3.easeLinear)
@@ -227,7 +228,7 @@ function render() {
         .renderDot(dot)
         .on("end", function () {
             dotIndex = (dotIndex + 1) % dots.length;
-            render();
+            setTimeout(render, 5);
         });
 }
 

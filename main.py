@@ -202,10 +202,10 @@ var graphviz = d3.select("#graph").graphviz()
     .transition(function () {
         return d3.transition("main")
             .ease(d3.easeLinear)
-            .delay(500)
-            .duration(1500);
+            .delay(250)
+            .duration(750);
     })
-    .logEvents(true)
+    //.logEvents(true)
     .on("initEnd", render);
 
 function render() {

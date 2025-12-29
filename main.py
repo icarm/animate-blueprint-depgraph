@@ -121,9 +121,10 @@ OUTPUT_HEADER="""
 
     #top-bar {
         height: 30px;
+        padding: 0 15px;
         flex-shrink: 0; /* Prevent shrinking */
         display: flex;
-        justify-content: center; /* Center horizontally */
+        justify-content: space-between;
         align-items: center;     /* Center vertically */
         background-color: #f8f9fa;
         border-bottom: 1px solid #ddd;
@@ -139,7 +140,7 @@ OUTPUT_HEADER="""
         flex-grow: 1; /* Take up all available remaining space */
         width: 100vw;
         text-align: center;
-        overflow: hidden; 
+        overflow: hidden;
     }
 
     #bottom-bar {
@@ -176,7 +177,7 @@ OUTPUT_HEADER="""
         flex-grow: 1; /* Take up all available remaining space */
         width: 100vw;
         text-align: center;
-        overflow: hidden; 
+        overflow: hidden;
     }
 </style>
 <body>
@@ -184,6 +185,7 @@ OUTPUT_HEADER="""
 <script src="https://unpkg.com/@hpcc-js/wasm@2.20.0/dist/graphviz.umd.js"></script>
 <script src="https://unpkg.com/d3-graphviz@5.6.0/build/d3-graphviz.js"></script>
 <div id="top-bar">
+    <div id="repo-title"></div>
     <div id="timestamp">0000-00-00</div>
 </div>
 <div id="graph" style="text-align: center;"></div>
@@ -214,6 +216,7 @@ function render() {
     var dot = depgraph.dot;
     // Update Top Bar Data immediately
     d3.select("#timestamp").text(depgraph.timestamp);
+    d3.select("#repo-title").text(repo_title);
     // Update Contributors (using D3 join pattern)
     d3.select("#contributors")
         .selectAll("img")
@@ -232,12 +235,13 @@ function render() {
         });
 }
 
-var dots = [
 """
 
-def construct_html(depgraphs, outfile):
+def construct_html(depgraphs, repo_title, outfile):
     with open(outfile, "w", encoding="utf-8") as f:
         f.write(OUTPUT_HEADER)
+        f.write('var repo_title = "{}"\n'.format(repo_title))
+        f.write("var dots = [\n")
         for depgraph in depgraphs:
             f.write('{"dot": `')
             f.write(depgraph.dot)
@@ -338,6 +342,7 @@ def main():
     revision_history_by_hash = get_collaborators.get_revision_history_by_hash(
         github_owner, github_repo, args.rev)
 
+
     commits = list_commits_chronologically(args.repo_path, args.rev, args.start_date)
 
     depgraphs = []
@@ -358,7 +363,8 @@ def main():
                                           contributors=contributors))
         ii += 1
 
-    construct_html(depgraphs, os.path.join(args.output, "{}.html".format(github_repo)))
+    repo_title = github_owner + "/" + github_repo
+    construct_html(depgraphs, repo_title, os.path.join(args.output, "{}.html".format(github_repo)))
 
 if __name__ == "__main__":
     main()

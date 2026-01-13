@@ -16,8 +16,8 @@ def get_depgraph(repo_path, commit_id):
 
     # hack to get `uv run` to work in a subprocess in a different directory
     subprocess_env = os.environ.copy()
-    subprocess_env.pop("VIRTUAL_ENV", None)
-    subprocess_env.pop("UV_PROJECT_ENVIRONMENT", None)
+    #subprocess_env.pop("VIRTUAL_ENV", None)
+    #subprocess_env.pop("UV_PROJECT_ENVIRONMENT", None)
 
     subprocess_env["PYTHONUNBUFFERED"] = "1"
 
@@ -325,12 +325,28 @@ def extract_github_info(repo_path):
     else:
         raise Exception("❌ Could not parse owner and repo name from URL.")
 
+# function to clone the github repo with owner and repo name, to a subdirectory of repos/
+# create repos/ if it does not exist
+def clone_repo(github_owner, github_repo):
+    repos_dir = "repos"
+    os.makedirs(repos_dir, exist_ok=True)
+    repo_dir = os.path.join(repos_dir, github_repo)
+
+    if not os.path.exists(repo_dir):
+        print(f"Cloning {github_owner}/{github_repo} into {repo_dir}")
+        subprocess.run(["git", "clone", f"https://github.com/{github_owner}/{github_repo}.git", repo_dir])
+    else:
+        print(f"Repository {repo_dir} already exists.")
+        # just `git fetch` the latest changes
+        subprocess.run(["git", "-C", repo_dir, "fetch"])
+    return repo_dir
+ 
 
 def main():
     parser = argparse.ArgumentParser(description="Serve blueprint and save SVG")
     parser.add_argument("--url", type=str, default="http://localhost:8000/dep_graph_document.html", help="URL to fetch the SVG from")
     parser.add_argument("--output", type=str, default="output", help="Output directory")
-    parser.add_argument("--repo-path", type=str, default="~/src/NegativeRupert", help="Path to the git repository to list commits from")
+    parser.add_argument("--repo-url", type=str, default="https://github.com/jcreedcmu/Noperthedron", help="URL of the project on github")
     parser.add_argument("--rev", type=str, default="main", help="Git revision to list commits from")
     parser.add_argument("--start-date", type=str, default="1970-01-01", help="Start date for listing commits (YYYY-MM-DD)")
     args = parser.parse_args()
@@ -338,18 +354,26 @@ def main():
     output_directory = os.path.expanduser(args.output)
     os.makedirs(output_directory, exist_ok=True)
 
-    github_owner, github_repo = extract_github_info(args.repo_path)
+    # extract github_owner and github_repo from args.repo_url
+    pattern = r'github\.com[:/]+([^/]+)/([^/]+?)(?:\.git)?$'
+    match = re.search(pattern, args.repo_url)
+    if match:
+        github_owner, github_repo = match.groups()
+        print(f"GitHub Owner: {github_owner}, Repo: {github_repo}")
+    else:
+        raise Exception("❌ Could not parse owner and repo name from URL.")
+    
     revision_history_by_hash = get_collaborators.get_revision_history_by_hash(
         github_owner, github_repo, args.rev)
 
-
-    commits = list_commits_chronologically(args.repo_path, args.rev, args.start_date)
+    repo_path = clone_repo(github_owner, github_repo)
+    commits = list_commits_chronologically(repo_path, args.rev, args.start_date)
 
     depgraphs = []
     ii = 0
     for commit in commits:
         print("commit ID:", commit.commit_id)
-        dot = get_depgraph(args.repo_path, commit.commit_id)
+        dot = get_depgraph(repo_path, commit.commit_id)
         revision_info = revision_history_by_hash[commit.commit_id]
         if dot:
             dot = fix_up_dot(dot)

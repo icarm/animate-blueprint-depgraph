@@ -1,6 +1,6 @@
 # Animate Blueprint Depgraph
 
-Given a Lean Blueprint project, makes an animation of the dependency graph.
+Given a [Lean Blueprint](https://github.com/PatrickMassot/leanblueprint) project, makes an animation of the dependency graph.
 
 
 [<img src="http://img.youtube.com/vi/tLHuVh7-G_8/maxresdefault.jpg" height="300px">](https://youtu.be/tLHuVh7-G_8)

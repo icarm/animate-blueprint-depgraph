@@ -11,3 +11,10 @@ Given a Lean Blueprint project, makes an animation of the dependency graph.
 ```shell
 uv run main.py --repo-url https://github.com/thefundamentaltheor3m/Sphere-Packing-Lean
 ```
+
+
+## Known Limitations
+
+* The project repo must be on Github.
+* Does not work if the dependency graph has been broken into chapters.
+

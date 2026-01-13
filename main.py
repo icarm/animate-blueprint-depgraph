@@ -287,41 +287,6 @@ def fix_up_dot(dot):
     print(new_g.to_string())
     return new_g.to_string()
 
-def extract_github_info(repo_path):
-    repo = Repo(repo_path)
-
-    try:
-        origin = repo.remote(name='origin')
-    except ValueError:
-        raise Exception("Error: Remote 'origin' does not exist in this repository.")
-
-    remote_url = str(origin.url)
-
-    # Basic check for GitHub domain
-    if "github.com" not in remote_url:
-        raise Exception(f"❌ Origin URL is not from GitHub: {remote_url}")
-
-    print(f"Found GitHub URL: {remote_url}")
-
-    # Regex to extract Owner and Repo Name
-    # Handles:
-    # 1. SSH:   git@github.com:owner/repo.git
-    # 2. HTTPS: https://github.com/owner/repo.git
-    # 3. git://github.com/owner/repo.git
-    pattern = r'(?:git@|https://|ssh://git@|git://)github\.com[:/]([^/]+)/(.+?)(?:\.git)?$'
-
-    match = re.search(pattern, remote_url)
-
-    if match:
-        owner, repo_name = match.groups()
-        print("-" * 30)
-        print(f"✅ Owner : {owner}")
-        print(f"✅ Repo  : {repo_name}")
-        print("-" * 30)
-        return owner, repo_name
-    else:
-        raise Exception("❌ Could not parse owner and repo name from URL.")
-
 # function to clone the github repo with owner and repo name, to a subdirectory of repos/
 # create repos/ if it does not exist
 def clone_repo(github_owner, github_repo):
@@ -337,7 +302,7 @@ def clone_repo(github_owner, github_repo):
         # just `git fetch` the latest changes
         subprocess.run(["git", "-C", repo_dir, "fetch"])
     return repo_dir
- 
+
 
 def main():
     parser = argparse.ArgumentParser(description="Serve blueprint and save SVG")

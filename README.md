@@ -12,6 +12,9 @@ Given a [Lean Blueprint](https://github.com/PatrickMassot/leanblueprint) project
 uv run main.py --repo-url https://github.com/thefundamentaltheor3m/Sphere-Packing-Lean
 ```
 
+It usually takes many minutes to run. When it is done, the output will be an html file
+in the `output/` directory.
+
 
 ## Known Limitations
 

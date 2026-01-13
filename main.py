@@ -14,10 +14,7 @@ import pydot
 def get_depgraph(repo_path, commit_id):
     target_dir = os.path.expanduser(repo_path)
 
-    # hack to get `uv run` to work in a subprocess in a different directory
     subprocess_env = os.environ.copy()
-    #subprocess_env.pop("VIRTUAL_ENV", None)
-    #subprocess_env.pop("UV_PROJECT_ENVIRONMENT", None)
 
     subprocess_env["PYTHONUNBUFFERED"] = "1"
 
@@ -25,8 +22,8 @@ def get_depgraph(repo_path, commit_id):
         "git checkout {}".format(commit_id),
  #       "lake exe cache get",
  #       "lake build",
-        "uv run leanblueprint web",
-#        "uv run leanblueprint pdf",
+        "leanblueprint web",
+#        "leanblueprint pdf",
         "git reset --hard HEAD", # clean up changes to output files that were accidentally checked in
         "git clean -f",
     ]

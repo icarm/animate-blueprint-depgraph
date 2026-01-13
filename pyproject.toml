@@ -1,5 +1,5 @@
 [project]
-name = "animate-blueprint"
+name = "animate-blueprint-depgraph"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"

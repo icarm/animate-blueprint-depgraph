@@ -2,147 +2,198 @@ import requests
 import os
 
 # CONFIGURATION
-OWNER = "jcreedcmu"  # Repository Owner
-REPO = "Noperthedron"       # Repository Name
-BRANCH = "main"       # Branch to analyze
-# Ideally, store this in an environment variable: export GITHUB_TOKEN="your_token"
+OWNER = "jcreedcmu"
+REPO = "Noperthedron"
+BRANCH = "main"
 TOKEN = os.getenv("GITHUB_TOKEN")
 
-def get_headers():
-    """Construct headers with authentication to increase rate limits."""
-    headers = {"Accept": "application/vnd.github.v3+json"}
-    if TOKEN:
-        headers["Authorization"] = f"token {TOKEN}"
-    else:
-        print("WARNING: No GITHUB_TOKEN found. Rate limits will be very low (60 req/hr).")
-    return headers
+def run_graphql_query(query, variables):
+    """Executes a GraphQL query against the GitHub API."""
+    url = "https://api.github.com/graphql"
+    headers = {
+        "Authorization": f"bearer {TOKEN}",
+        "Accept": "application/vnd.github.v3+json"
+    }
 
-def fetch_all_commits(owner, repo, branch):
+    response = requests.post(url, json={'query': query, 'variables': variables}, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Query failed: {response.status_code} - {response.text}")
+
+    json_data = response.json()
+    if 'errors' in json_data:
+        raise Exception(f"GraphQL Errors: {json_data['errors']}")
+
+    return json_data
+
+def fetch_history_graphql(owner, repo, branch):
     """
-    Fetches all commits from the repo using pagination.
-    Returns a list of commit objects (metadata).
+    Fetches commit history including pre-resolved co-authors using GraphQL.
     """
+    print(f"Fetching commit history for {owner}/{repo} on '{branch}' via GraphQL...")
+
+    query = """
+    query($owner: String!, $name: String!, $branch: String!, $cursor: String) {
+      repository(owner: $owner, name: $name) {
+        ref(qualifiedName: $branch) {
+          target {
+            ... on Commit {
+              history(first: 100, after: $cursor) {
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+                nodes {
+                  oid
+                  committedDate
+                  # 'authors' includes the main author AND co-authors
+                  authors(first: 10) {
+                    nodes {
+                      name
+                      email
+                      user {
+                        login
+                        avatarUrl
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
     commits = []
-    page = 1
-    url = f"https://api.github.com/repos/{owner}/{repo}/commits"
+    cursor = None
+    has_next = True
 
-    print(f"Fetching commits for {owner}/{repo} on branch '{branch}'...")
+    # Ensure branch name is fully qualified for the API
+    qualified_branch = branch if branch.startswith("refs/") else f"refs/heads/{branch}"
 
-    while True:
-        params = {
-            "sha": branch,
-            "per_page": 100, # Max allowed per page
-            "page": page
+    while has_next:
+        variables = {
+            "owner": owner,
+            "name": repo,
+            "branch": qualified_branch,
+            "cursor": cursor
         }
 
-        response = requests.get(url, headers=get_headers(), params=params)
+        data = run_graphql_query(query, variables)
 
-        if response.status_code != 200:
-            raise Exception(f"API Error: {response.status_code} - {response.text}")
-
-        batch = response.json()
-
-        if not batch:
+        repo_data = data.get('data', {}).get('repository')
+        if not repo_data or not repo_data.get('ref'):
+            print("Error: Repository or Branch not found.")
             break
 
+        history = repo_data['ref']['target']['history']
+        batch = history['nodes']
         commits.extend(batch)
+
         print(f"Fetched {len(commits)} commits so far...")
 
-        if len(batch) < 100:
-            break # End of list
-
-        page += 1
+        page_info = history['pageInfo']
+        has_next = page_info['hasNextPage']
+        cursor = page_info['endCursor']
 
     return commits
 
 def analyze_contributors_history(commits):
     """
-    Iterates through commits chronologically to build cumulative contributor lists.
+    Iterates through commits chronologically.
+    The GraphQL data is already structured with resolved users.
     """
-    # The API returns commits in Reverse Chronological order (Newest first).
-    # We flip it to start from the first commit ever.
+    # GraphQL returns newest first, reverse for chronological order
     chronological_commits = commits[::-1]
 
     history_data = []
-
-    # We use a dictionary to keep unique contributors based on their ID or Name
     seen_contributors = {}
 
     print("\nProcessing revision history...")
 
-    for commit_obj in chronological_commits:
-        sha = commit_obj['sha']
-        author_info = commit_obj.get('author')
-        commit_meta = commit_obj.get('commit', {}).get('author', {})
+    for commit in chronological_commits:
+        sha = commit['oid']
+        date = commit['committedDate']
 
-        contributor_entry = None
-        contributor_id = None
+        # The 'authors' list from GraphQL contains both Main Author + Co-Authors
+        author_nodes = commit['authors']['nodes']
 
-        # Case 1: The user is linked to a valid GitHub account
-        if author_info:
-            contributor_id = author_info['id']
-            contributor_entry = {
-                "type": "github_user",
-                "login": author_info['login'],
-                "avatar_url": author_info['avatar_url'],
-                "html_url": author_info['html_url']
-            }
+        for actor in author_nodes:
+            # Check if this Git actor is linked to a GitHub User
+            gh_user = actor.get('user')
 
-        # Case 2: No GitHub account linked (Git email doesn't match a GitHub user)
-        # We fall back to the Git Name/Email
-        else:
-            contributor_id = commit_meta.get('email')
-            contributor_entry = {
-                "type": "git_user",
-                "login": commit_meta.get('name'), # Use Git Name as login display
-                "avatar_url": None, # Cannot get avatar without GitHub account
-                "html_url": None
-            }
+            if gh_user:
+                # We have a valid GitHub account
+                contributor_id = gh_user['login']
+                contributor_entry = {
+                    "type": "github_user",
+                    "login": gh_user['login'],
+                    "avatar_url": gh_user['avatarUrl'], # CamelCase from GraphQL
+                    "html_url": gh_user['url']
+                }
+            else:
+                # No GitHub account linked (or user not resolved)
+                contributor_id = actor['email']
+                contributor_entry = {
+                    "type": "git_user",
+                    "login": actor['name'],
+                    "avatar_url": None,
+                    "html_url": None
+                }
 
-        # Add to our unique set of contributors
-        if contributor_id and contributor_id not in seen_contributors:
-            seen_contributors[contributor_id] = contributor_entry
+            # Add to cumulative list
+            if contributor_id not in seen_contributors:
+                seen_contributors[contributor_id] = contributor_entry
 
-        # Store the state of contributors at this specific commit SHA
+        # Snapshot state
         history_data.append({
             "commit_sha": sha,
-            "date": commit_meta.get('date'),
+            "date": date,
             "contributor_count": len(seen_contributors),
             "contributors": list(seen_contributors.values())
         })
 
     return history_data
 
-
 def get_revision_history(owner, repo, branch="main"):
-    # 1. Get raw data
-    raw_commits = fetch_all_commits(owner, repo, branch)
-
-    # 2. Process data
-    revision_history = analyze_contributors_history(raw_commits)
-
-    # 3. Output Example (Printing the last 3 revisions)
-    print(f"\nAnalysis Complete. Total revisions processed: {len(revision_history)}")
-
-    return revision_history
+    """
+    Main entry point: fetches raw data via GraphQL and processes it.
+    Returns a list of dicts (chronological order).
+    """
+    raw_commits = fetch_history_graphql(owner, repo, branch)
+    return analyze_contributors_history(raw_commits)
 
 def get_revision_history_by_hash(owner, repo, branch="main"):
+    """
+    Wrapper to return a dictionary keyed by commit SHA.
+    """
     revision_history = get_revision_history(owner, repo, branch)
     result = {}
     for rev in revision_history:
         result[rev['commit_sha']] = rev
-
     return result
 
 if __name__ == "__main__":
+    if not TOKEN:
+        print("ERROR: GITHUB_TOKEN is required for GraphQL API calls.")
+        exit(1)
+
     try:
+        # Use the wrapper function to test
         revision_history = get_revision_history(OWNER, REPO, BRANCH)
-        for revision in revision_history:
-            print(f"Commit: {revision['commit_sha'][:7]} | Date: {revision['date']}")
-            print(f"Total Contributors up to this point: {revision['contributor_count']}")
-            display_contributors = [c['login'] for c in revision['contributors']]
-            print(f"Contributors: {display_contributors}...")
-            print("-" * 40)
+
+        if revision_history:
+            latest = revision_history[-1]
+            print(f"\n--- Analysis Complete (SHA: {latest['commit_sha'][:7]}) ---")
+            print(f"Total Contributors: {latest['contributor_count']}")
+            print("Contributors:")
+            for c in latest['contributors']:
+                type_label = "[GitHub]" if c['type'] == 'github_user' else "[Git]"
+                avatar = c['avatar_url'] if c['avatar_url'] else "(No Avatar)"
+                print(f" {type_label:8} {c['login']:<20} {avatar}")
 
     except Exception as e:
         print(f"Error: {e}")

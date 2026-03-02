@@ -306,7 +306,6 @@ def clone_repo(github_owner, github_repo):
 
 def main():
     parser = argparse.ArgumentParser(description="Serve blueprint and save SVG")
-    parser.add_argument("--url", type=str, default="http://localhost:8000/dep_graph_document.html", help="URL to fetch the SVG from")
     parser.add_argument("--output", type=str, default="output", help="Output directory")
     parser.add_argument("--repo-url", type=str, default="https://github.com/jcreedcmu/Noperthedron", help="URL of the project on github")
     parser.add_argument("--rev", type=str, default="main", help="Git revision to list commits from")

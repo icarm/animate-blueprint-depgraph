@@ -245,6 +245,8 @@ function render() {
             dotIndex += 1;
             if (dotIndex < dots.length && !paused) {
                 setTimeout(render, 5);
+            } else if (dotIndex >= dots.length) {
+                document.body.setAttribute("data-finished", "true");
             }
         });
 }

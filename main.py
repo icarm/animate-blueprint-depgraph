@@ -193,6 +193,7 @@ OUTPUT_HEADER="""
 <script>
 
 var dotIndex = 0;
+var paused = false;
 var graphviz = d3.select("#graph").graphviz()
     .width(window.innerWidth - 30)
     .height(window.innerHeight - 70)
@@ -207,6 +208,20 @@ var graphviz = d3.select("#graph").graphviz()
     })
     //.logEvents(true)
     .on("initEnd", render);
+
+document.addEventListener("keydown", function(e) {
+    if (e.key === " " || e.code === "Space") {
+        e.preventDefault();
+        paused = !paused;
+        if (!paused && dotIndex < dots.length) {
+            render();
+        }
+    } else if (e.key === "r") {
+        dotIndex = 0;
+        paused = false;
+        render();
+    }
+});
 
 function render() {
     var depgraph = dots[dotIndex];
@@ -227,8 +242,10 @@ function render() {
     graphviz
         .renderDot(dot)
         .on("end", function () {
-            dotIndex = (dotIndex + 1) % dots.length;
-            setTimeout(render, 5);
+            dotIndex += 1;
+            if (dotIndex < dots.length && !paused) {
+                setTimeout(render, 5);
+            }
         });
 }
 
@@ -299,8 +316,9 @@ def clone_repo(github_owner, github_repo):
         subprocess.run(["git", "clone", f"https://github.com/{github_owner}/{github_repo}.git", repo_dir])
     else:
         print(f"Repository {repo_dir} already exists.")
-        # just `git fetch` the latest changes
+        # fetch and pull the latest changes
         subprocess.run(["git", "-C", repo_dir, "fetch"])
+        subprocess.run(["git", "-C", repo_dir, "pull"])
     return repo_dir
 
 

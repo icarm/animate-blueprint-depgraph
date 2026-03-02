@@ -344,6 +344,14 @@ def main():
     else:
         raise Exception("❌ Could not parse owner and repo name from URL.")
     
+    if not os.getenv("GITHUB_TOKEN"):
+        raise SystemExit(
+            "Error: GITHUB_TOKEN environment variable is not set.\n"
+            "A GitHub personal access token is required for GraphQL API calls.\n"
+            "Create one at https://github.com/settings/tokens and run:\n"
+            "  export GITHUB_TOKEN=your_token_here"
+        )
+
     revision_history_by_hash = get_collaborators.get_revision_history_by_hash(
         github_owner, github_repo, args.rev)
 

@@ -40,6 +40,28 @@ def main():
             print(f"Opening {file_url} at {args.width}x{args.height}")
             page.goto(file_url)
 
+            # Chromium's screencast only delivers video frames when the page
+            # repaints, and the recording can only ever end on the last frame
+            # that was actually delivered. Once the animation stops, the page
+            # goes static and no more frames flow, so if Chromium fails to
+            # deliver the final repaint the video ends mid-transition and the
+            # linger below is lost. Keep an imperceptible animation running so
+            # frames keep flowing until the recording is closed.
+            page.evaluate(
+                """() => {
+                    const beacon = document.createElement('div');
+                    beacon.style.cssText =
+                        'position:fixed;top:0;left:0;width:2px;height:2px;' +
+                        'background:#888;opacity:0.02;pointer-events:none;' +
+                        'z-index:99999';
+                    document.body.appendChild(beacon);
+                    (function spin(t) {
+                        beacon.style.transform = 'rotate(' + (t / 16) % 360 + 'deg)';
+                        requestAnimationFrame(spin);
+                    })(0);
+                }"""
+            )
+
             # Poll animation progress and display a progress bar
             total = page.evaluate("dots.length")
             bar_width = 40

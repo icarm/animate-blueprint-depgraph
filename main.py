@@ -117,8 +117,9 @@ OUTPUT_HEADER="""
     }
 
     #top-bar {
-        height: 30px;
-        padding: 0 15px;
+        height: 4vh;
+        padding: 0 1.5vh;
+        font-size: 2.2vh;
         flex-shrink: 0; /* Prevent shrinking */
         display: flex;
         justify-content: space-between;
@@ -128,7 +129,7 @@ OUTPUT_HEADER="""
     }
 
     #timestamp {
-        font-size: 16px;
+        font-size: 2.2vh;
         font-weight: bold;
         color: #333;
     }
@@ -141,19 +142,19 @@ OUTPUT_HEADER="""
     }
 
     #bottom-bar {
-        height: 40px;
+        height: 5vh;
         flex-shrink: 0; /* Prevent shrinking */
         display: flex;
         align-items: center;
-        padding: 0 15px;
+        padding: 0 1.5vh;
         background-color: #f8f9fa;
         border-top: 1px solid #ddd;
         box-sizing: border-box;
     }
     .label {
         font-weight: bold;
-        margin-right: 10px;
-        font-size: 14px;
+        margin-right: 1vh;
+        font-size: 2vh;
         color: #555;
         text-transform: capitalize;
     }
@@ -163,10 +164,10 @@ OUTPUT_HEADER="""
         align-items: center;
     }
     .avatar {
-        height: 24px;
-        width: 24px;
+        height: 3.4vh;
+        width: 3.4vh;
         border-radius: 5%;
-        margin-left: 8px;
+        margin-left: 0.8vh;
         border: 1px solid #ccc;
     }
 
@@ -194,9 +195,10 @@ OUTPUT_HEADER="""
 
 var dotIndex = 0;
 var paused = false;
+var graphDiv = document.getElementById("graph");
 var graphviz = d3.select("#graph").graphviz()
-    .width(window.innerWidth - 30)
-    .height(window.innerHeight - 70)
+    .width(graphDiv.clientWidth - 30)
+    .height(graphDiv.clientHeight)
     .zoom(false)
     .fit(true)
     .tweenShapes(false)
